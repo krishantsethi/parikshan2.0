@@ -206,7 +206,26 @@ scripts/             migration + demo seed runners
 
 ## Deployment
 
-See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md). Short version: import the repository into Vercel, set `AUTH_SECRET` and (for persistence) `DATABASE_URL`, run migrations once, deploy. Demo mode works with no environment variables but is intentionally volatile.
+See [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) for the full runbook.
+
+**Status of this build:** a Vercel project (`parikshan`) has been created and configured
+(`AUTH_SECRET`, `DEMO_MODE=true`, `UPLOAD_MAX_MB=4`, `OCR_PROVIDER=tesseract`), but the deployment
+could not be triggered from this environment: the Vercel connector rejects both the documented and
+the string form of `git_source`, and a files-only deployment of the whole source is not possible in a
+single call. No deployment URL is claimed until one is verified.
+
+**Two-minute manual path (owner):**
+
+1. Open the existing Vercel project **parikshan** → Settings → Git → connect
+   `krishantsethi/parikshan2.0`, and set the production branch to
+   `arena/2fbf9278-parikshan2-0` (or merge the open pull request into `main` first and use `main`).
+2. Trigger a deployment. Environment variables are already configured in the project.
+3. Set `NEXT_PUBLIC_APP_URL` to the assigned domain and redeploy so metadata, sitemap, and reset
+   links use the canonical URL.
+4. Optional persistence: create a Postgres database, add `DATABASE_URL`, and run
+   `npm run db:migrate` once.
+
+Demo mode works with no additional configuration, but its data is per-instance memory and may reset.
 
 ---
 
