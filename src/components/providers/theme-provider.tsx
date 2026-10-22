@@ -2,7 +2,11 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { THEME_COOKIE_NAME as THEME_COOKIE } from "@/lib/cookies";
+import {
+  PREFERENCE_MAX_AGE_SECONDS,
+  THEME_COOKIE_NAME as THEME_COOKIE,
+  writeClientCookie,
+} from "@/lib/cookies";
 import type { Theme } from "@/types/domain";
 
 interface ThemeContextValue {
@@ -21,7 +25,7 @@ export function ThemeProvider({ theme: initialTheme, children }: { theme: Theme;
     (next: Theme) => {
       setThemeState(next);
       document.documentElement.dataset.theme = next;
-      document.cookie = `${THEME_COOKIE}=${next};path=/;max-age=31536000;samesite=lax`;
+      writeClientCookie(THEME_COOKIE, next, PREFERENCE_MAX_AGE_SECONDS);
       router.refresh();
     },
     [router],

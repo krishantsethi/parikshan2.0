@@ -57,6 +57,20 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
   return (
     <html lang={locale} data-theme={theme} suppressHydrationWarning>
       <body className="font-sans antialiased">
+        {/*
+          Hard safety net. `Reveal` already fails open (it renders visible
+          markup on the server and only animates after mount), but if an
+          animation library ever leaves an inline opacity behind and scripts
+          do not run, this guarantees content is never stranded invisible.
+          CSP permits inline styles via style-src 'unsafe-inline'.
+        */}
+        <noscript>
+          <style
+            dangerouslySetInnerHTML={{
+              __html: "[data-pk-reveal]{opacity:1 !important;transform:none !important}",
+            }}
+          />
+        </noscript>
         <AppProviders locale={locale} theme={theme}>
           {children}
         </AppProviders>

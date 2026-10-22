@@ -6,7 +6,7 @@ import { Dropdown, DropdownItem, DropdownSeparator } from "@/components/ui/dropd
 import { Avatar } from "@/components/ui/misc";
 import { useLocale } from "@/components/providers/locale-provider";
 import type { HealthProfile } from "@/types/domain";
-import { PROFILE_COOKIE } from "@/lib/cookies";
+import { PREFERENCE_MAX_AGE_SECONDS, PROFILE_COOKIE, writeClientCookie } from "@/lib/cookies";
 
 /**
  * Switches the active health profile. The cookie only stores a profile id —
@@ -25,7 +25,7 @@ export function ProfileSwitcher({
 
   function select(profileId: string) {
     if (profileId === activeProfile.id) return;
-    document.cookie = `${PROFILE_COOKIE}=${profileId};path=/;max-age=31536000;samesite=lax`;
+    writeClientCookie(PROFILE_COOKIE, profileId, PREFERENCE_MAX_AGE_SECONDS);
     router.refresh();
   }
 

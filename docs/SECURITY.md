@@ -24,7 +24,8 @@
 - **Validation:** zod schemas; dates validated as real calendar dates; profile creation for someone else requires explicit authorization affirmation.
 - **Uploads:** magic-byte allowlist, declared-type agreement, empty/oversize rejection, filename sanitization (path traversal/control chars), storage only after validation.
 - **Rate limiting:** fixed-window per IP per bucket (auth 5–10/5 min, upload 10/5 min, AI 20/5 min, feedback 5/15 min).
-- **Headers:** CSP, `X-Content-Type-Options`, `X-Frame-Options: DENY`, `Referrer-Policy`, `Permissions-Policy`; download endpoint adds `Content-Security-Policy: default-src 'none'; sandbox`.
+- **Headers:** CSP, `X-Content-Type-Options`, `Referrer-Policy`, `Permissions-Policy`; download endpoint adds `Content-Security-Policy: default-src 'none'; sandbox`.
+- **Framing policy:** by default the app cannot be embedded cross-origin — CSP `frame-ancestors 'self'` plus `X-Frame-Options: DENY`. `FRAME_ANCESTORS` opts in to named parent origins (used to view the app inside sandbox/Vercel preview panels, which frame it from a different origin). When the allowlist contains anything beyond `'self'`, `X-Frame-Options` is omitted rather than contradicted, since CSP `frame-ancestors` supersedes it and XFO cannot express an allowlist. `FRAME_ANCESTORS=*` is preview-only and must never be used where real patient data is present: it permits clickjacking of a health-record UI.
 - **Audit:** security-relevant actions recorded without document content; visible to the user in Activity history; deleted with the account.
 - **AI data minimization:** only retrieved excerpts for the asked question are sent; keys never reach the browser; no training pipeline exists.
 - **No analytics/trackers:** no third-party scripts are loaded by the app.

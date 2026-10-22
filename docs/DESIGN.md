@@ -34,13 +34,15 @@ Fonts: system UI stack with Inter first, Devanagari fallback; monospace for all 
 
 Purposeful primitives only: staggered reveals (once), counters, dialog/drawer springs, tab indicator, upload scan line, processing shimmer. All animation respects `prefers-reduced-motion` globally (durations collapse via CSS) and via `useReducedMotion` for React-driven motion. No animation is applied to critical numeric values without a static fallback.
 
+**Motion is fail-open.** Server-rendered markup is always fully visible and always shows real values; animation is layered on only after React mounts. `Reveal` drives its entrance from `animate` rather than `initial`, so no inline `opacity:0` is ever committed to the SSR HTML, and `AnimatedCounter` renders the true value rather than counting up from a misleading `0`. This matters because an entrance animation that depends on hydration *and* an IntersectionObserver will silently strand content invisible when scripts are blocked, slow, or when the observer never fires inside a throttled cross-origin iframe. A `<noscript>` rule in the root layout forces `[data-pk-reveal]` visible as a final backstop. Covered by `tests/components/reveal-fail-open.test.tsx`.
+
 ## VFX decisions
 
 - One WebGL canvas, only on the landing hero.
 - Dynamically imported; never shipped to other routes.
 - **No postprocessing pass** — glow is simulated with additive particles, emissive colors, and CSS gradients. This keeps the frame budget predictable.
 - DPR capped at 1.6; pointer parallax damped; particle count 850.
-- Fallbacks: CSS/SVG orbit for reduced motion, no WebGL, or viewports ≤ 640px.
+- Fallbacks: CSS/SVG orbit for reduced motion, no WebGL, or viewports ≤ 380px. The breakpoint is deliberately low so the WebGL core reaches ordinary phones and narrow preview panels; the scene's cost controls above are what keep that affordable, not the breakpoint.
 
 ## Components
 

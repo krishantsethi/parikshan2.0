@@ -5,8 +5,8 @@ import { cleanup } from "@testing-library/react";
 if (typeof document !== "undefined") {
   afterEach(() => cleanup());
 
-  // jsdom lacks matchMedia / ResizeObserver, which framer-motion and chart
-  // libraries probe for. Provide inert implementations.
+  // jsdom lacks matchMedia / ResizeObserver / IntersectionObserver, which
+  // framer-motion and chart libraries probe for. Provide inert implementations.
   if (!window.matchMedia) {
     window.matchMedia = ((query: string) => ({
       matches: false,
@@ -27,6 +27,25 @@ if (typeof document !== "undefined") {
   }
   if (!("ResizeObserver" in globalThis)) {
     (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = ResizeObserverStub;
+  }
+
+  // framer-motion's useInView needs IntersectionObserver. The stub deliberately
+  // never reports an intersection, so reveal-driven components stay in their
+  // pre-animation state — which is what the fail-open tests assert on.
+  class IntersectionObserverStub {
+    readonly root = null;
+    readonly rootMargin = "";
+    readonly thresholds = [0];
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+  }
+  if (!("IntersectionObserver" in globalThis)) {
+    (globalThis as unknown as { IntersectionObserver: unknown }).IntersectionObserver =
+      IntersectionObserverStub;
   }
 
   if (!window.HTMLElement.prototype.scrollTo) {

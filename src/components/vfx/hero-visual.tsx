@@ -98,8 +98,10 @@ export function HeroVisual() {
 
   useEffect(() => {
     setWebgl(supportsWebGl());
-    // Skip WebGL on very small screens to keep mobile scrolling smooth.
-    const query = window.matchMedia("(max-width: 640px)");
+    // Only skip WebGL on genuinely tiny viewports (large phones in portrait
+    // stay above this). The scene caps DPR at 1.6 and runs a single canvas
+    // with no post-processing pass, so it is affordable on mobile GPUs.
+    const query = window.matchMedia("(max-width: 380px)");
     const update = () => setCompact(query.matches);
     update();
     query.addEventListener("change", update);
