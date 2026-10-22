@@ -20,7 +20,7 @@ import { Checkbox, Input, Select, Textarea } from "@/components/ui/field";
 import { Alert } from "@/components/ui/alert";
 import { useT } from "@/components/providers/locale-provider";
 import { useToast } from "@/components/providers/toast-provider";
-import { PROFILE_COOKIE } from "@/lib/cookies";
+import { PREFERENCE_MAX_AGE_SECONDS, PROFILE_COOKIE, writeClientCookie } from "@/lib/cookies";
 import { formatDate } from "@/lib/format";
 import type { HealthProfile, Locale, ProfileRelation } from "@/types/domain";
 
@@ -156,7 +156,7 @@ export function ProfileManager({
       toast({ title: t("common.deleted"), variant: "success" });
       setDeleting(null);
       if (deleting.id === activeProfileId) {
-        document.cookie = `${PROFILE_COOKIE}=;path=/;max-age=0;samesite=lax`;
+        writeClientCookie(PROFILE_COOKIE, "", 0);
       }
       router.refresh();
     } catch (removeError) {
@@ -170,7 +170,7 @@ export function ProfileManager({
   }
 
   function switchTo(profileId: string) {
-    document.cookie = `${PROFILE_COOKIE}=${profileId};path=/;max-age=31536000;samesite=lax`;
+    writeClientCookie(PROFILE_COOKIE, profileId, PREFERENCE_MAX_AGE_SECONDS);
     router.refresh();
   }
 

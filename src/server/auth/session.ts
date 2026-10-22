@@ -9,10 +9,15 @@ export const SESSION_COOKIE = "pk_session";
 
 function cookieOptions(maxAgeSeconds: number) {
   const cfg = getConfig();
+  // SameSite=None is only honoured by browsers alongside Secure. Without the
+  // pair the cookie is dropped, which presents as a login that appears to
+  // succeed and then bounces straight back to /login when the app is embedded
+  // in a cross-origin frame (sandbox / Vercel preview panels).
+  const secure = cfg.cookieSameSite === "none" ? true : cfg.isProduction;
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
-    secure: cfg.isProduction,
+    sameSite: cfg.cookieSameSite,
+    secure,
     path: "/",
     maxAge: maxAgeSeconds,
   };

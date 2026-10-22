@@ -20,12 +20,27 @@ export interface OcrConfig {
   languages: string;
 }
 
+/**
+ * Cookie SameSite posture.
+ *
+ * "lax" (default) is the hardened choice for a normally-served app. "none" is
+ * required only when PARIKSHAN is embedded in a cross-origin frame — sandbox
+ * preview panels, Vercel preview embeds — because browsers will not send a
+ * Lax cookie on a third-party iframe request. Without it, login appears to
+ * succeed and then bounces straight back to /login.
+ *
+ * "none" is only honoured over HTTPS: browsers reject SameSite=None without
+ * the Secure attribute, so it is forced on in that mode.
+ */
+export type CookieSameSite = "lax" | "strict" | "none";
+
 export interface AppConfig {
   appUrl: string;
   authSecret: string;
   /** True when AUTH_SECRET was not supplied and a dev fallback is in use. */
   insecureAuthSecret: boolean;
   sessionTtlHours: number;
+  cookieSameSite: CookieSameSite;
   databaseUrl: string | null;
   storageDriver: "auto" | "postgres" | "memory";
   uploadMaxBytes: number;
@@ -68,11 +83,25 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
 
   const uploadMaxMb = clampInt(int(env.UPLOAD_MAX_MB, 10), 1, 25, 10);
 
+  // NEXT_PUBLIC_ so client components (theme/locale/profile cookies) resolve
+  // the same posture as the server session cookie. Inlined at build time.
+  const rawSameSite = (env.NEXT_PUBLIC_COOKIE_SAME_SITE ?? "").trim().toLowerCase();
+  const cookieSameSite: CookieSameSite =
+    rawSameSite === "none" || rawSameSite === "strict" ? rawSameSite : "lax";
+  if (cookieSameSite === "none" && !env.NEXT_PUBLIC_APP_URL?.startsWith("https://")) {
+    console.warn(
+      "[parikshan] NEXT_PUBLIC_COOKIE_SAME_SITE=none requires HTTPS (the Secure attribute is " +
+        "mandatory for SameSite=None and browsers drop the cookie otherwise). " +
+        "Only use this when the app is embedded in a cross-origin frame.",
+    );
+  }
+
   return {
     appUrl: env.NEXT_PUBLIC_APP_URL?.trim() || "http://localhost:3000",
     authSecret: authSecret || DEV_FALLBACK_SECRET,
     insecureAuthSecret,
     sessionTtlHours: clampInt(int(env.SESSION_TTL_HOURS, 168), 1, 24 * 90, 168),
+    cookieSameSite,
     databaseUrl: env.DATABASE_URL?.trim() || null,
     storageDriver: (["auto", "postgres", "memory"].includes((env.STORAGE_DRIVER ?? "").trim())
       ? (env.STORAGE_DRIVER as AppConfig["storageDriver"])
@@ -126,6 +155,13 @@ export function capabilityReport(cfg: AppConfig = getConfig()) {
       ? { configured: true, label: "OpenFDA interaction lookups enabled" }
       : { configured: false, label: "OpenFDA disabled — curated dataset only" },
     storage: { configured: true, label: `Driver: ${cfg.storageDriver}` },
+    cookies: {
+      configured: cfg.cookieSameSite === "lax",
+      label:
+        cfg.cookieSameSite === "none"
+          ? "SameSite=None (cross-origin frame embedding enabled — requires HTTPS)"
+          : `SameSite=${cfg.cookieSameSite}`,
+    },
     demoMode: cfg.demoMode,
   };
 }

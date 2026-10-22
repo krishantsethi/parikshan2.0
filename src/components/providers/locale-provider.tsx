@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import { LOCALE_COOKIE, DEFAULT_LOCALE, LOCALES, isLocale } from "@/i18n/config";
+import { PREFERENCE_MAX_AGE_SECONDS, writeClientCookie } from "@/lib/cookies";
 import { createTranslator, type Translate } from "@/i18n/index";
 import type { Locale } from "@/types/domain";
 
@@ -37,7 +38,7 @@ export function LocaleProvider({
   const setLocale = useCallback(
     (next: Locale) => {
       setLocaleState(next);
-      document.cookie = `${LOCALE_COOKIE}=${next};path=/;max-age=31536000;samesite=lax`;
+      writeClientCookie(LOCALE_COOKIE, next, PREFERENCE_MAX_AGE_SECONDS);
       document.documentElement.lang = next;
       router.refresh();
     },
