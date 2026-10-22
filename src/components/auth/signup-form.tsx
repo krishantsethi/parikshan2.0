@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox, Input } from "@/components/ui/field";
 import { useT } from "@/components/providers/locale-provider";
 import { useToast } from "@/components/providers/toast-provider";
+import { StorageAccessNotice } from "@/components/auth/storage-access-notice";
+import { ensureStorageAccess } from "@/lib/storage-access";
 
 export function SignupForm() {
   const t = useT();
@@ -40,6 +42,11 @@ export function SignupForm() {
     if (!validate()) return;
     setSubmitting(true);
     try {
+      // Cross-origin preview frames may withhold cookie access; this click is
+      // the user gesture the Storage Access API requires to grant it.
+      if (!(await ensureStorageAccess())) {
+        throw new Error(t("auth.error.storageAccess"));
+      }
       const response = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -76,6 +83,8 @@ export function SignupForm() {
           {error}
         </Alert>
       )}
+
+      <StorageAccessNotice />
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
         <Input

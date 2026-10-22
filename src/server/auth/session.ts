@@ -1,26 +1,50 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
-import { getConfig } from "@/lib/env";
+import { getConfig, type AppConfig } from "@/lib/env";
 import { getStore } from "@/server/db";
 import { hashToken, randomToken } from "@/server/auth/tokens";
 import type { User } from "@/types/domain";
 
 export const SESSION_COOKIE = "pk_session";
 
-function cookieOptions(maxAgeSeconds: number) {
-  const cfg = getConfig();
-  // SameSite=None is only honoured by browsers alongside Secure. Without the
-  // pair the cookie is dropped, which presents as a login that appears to
-  // succeed and then bounces straight back to /login when the app is embedded
-  // in a cross-origin frame (sandbox / Vercel preview panels).
-  const secure = cfg.cookieSameSite === "none" ? true : cfg.isProduction;
+export interface SessionCookieOptions {
+  httpOnly: true;
+  sameSite: AppConfig["cookieSameSite"];
+  secure: boolean;
+  partitioned: boolean;
+  path: "/";
+  maxAge: number;
+}
+
+/**
+ * The session cookie's attribute set, as a pure function so it can be asserted
+ * in tests without a request context.
+ *
+ * - SameSite=None is only honoured by browsers alongside Secure; without the
+ *   pair the cookie is dropped, which presents as a login that appears to
+ *   succeed and then bounces straight back to /login.
+ * - `partitioned` (CHIPS) partitions the cookie to the top-level site. When the
+ *   app is embedded cross-origin this is what lets browsers that block
+ *   third-party cookies outright (Chrome's phase-out, Safari ITP, Firefox)
+ *   still store and send the session inside the frame.
+ */
+export function sessionCookieOptions(
+  cfg: AppConfig,
+  maxAgeSeconds: number,
+): SessionCookieOptions {
+  const embedded = cfg.cookieSameSite === "none";
   return {
     httpOnly: true,
     sameSite: cfg.cookieSameSite,
-    secure,
+    secure: embedded ? true : cfg.isProduction,
+    partitioned: embedded,
     path: "/",
     maxAge: maxAgeSeconds,
   };
+}
+
+function cookieOptions(maxAgeSeconds: number) {
+  return sessionCookieOptions(getConfig(), maxAgeSeconds);
 }
 
 /** Create a session row + set the httpOnly cookie. */

@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
 import { useT } from "@/components/providers/locale-provider";
 import { useToast } from "@/components/providers/toast-provider";
+import { StorageAccessNotice } from "@/components/auth/storage-access-notice";
+import { ensureStorageAccess } from "@/lib/storage-access";
 
 export function LoginForm() {
   const t = useT();
@@ -26,6 +28,12 @@ export function LoginForm() {
     setError(null);
     setDemoLoading(true);
     try {
+      // Inside a cross-origin preview frame the browser may withhold cookie
+      // access entirely. Requesting it here is a genuine user gesture, which
+      // is exactly what the Storage Access API requires.
+      if (!(await ensureStorageAccess())) {
+        throw new Error(t("auth.error.storageAccess"));
+      }
       const response = await fetch("/api/auth/demo", { method: "POST" });
       const data = (await response.json()) as { error?: string };
       if (!response.ok) throw new Error(data.error ?? t("auth.error.generic"));
@@ -54,6 +62,9 @@ export function LoginForm() {
     setError(null);
     setSubmitting(true);
     try {
+      if (!(await ensureStorageAccess())) {
+        throw new Error(t("auth.error.storageAccess"));
+      }
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "content-type": "application/json" },
@@ -85,6 +96,8 @@ export function LoginForm() {
           {error}
         </Alert>
       )}
+
+      <StorageAccessNotice />
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4" noValidate>
         <Input
