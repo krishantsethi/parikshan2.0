@@ -1,4 +1,6 @@
 import { getStore } from "@/server/db";
+import { getConfig } from "@/lib/env";
+import { DEMO_CREDENTIALS } from "@/server/db/memory-store";
 import { verifyPassword } from "@/server/auth/password";
 import { establishSession } from "@/server/auth/session";
 import { ApiError } from "@/server/auth/guard";
@@ -27,7 +29,13 @@ export async function POST(request: Request) {
       throw new ApiError(401, "Incorrect email or password.", "invalid_credentials");
     }
 
-    await establishSession(user.id, request.headers.get("user-agent"));
+    // The seeded demo account gets a stateless signed session on demo
+    // deployments (no shared storage across serverless instances); every other
+    // account keeps a database-backed, revocable session.
+    const statelessDemo = !getConfig().databaseUrl && user.email === DEMO_CREDENTIALS.email;
+    await establishSession(user.id, request.headers.get("user-agent"), {
+      statelessDemo,
+    });
     await store.logAudit({ userId: user.id, action: "login", entity: "user", entityId: user.id });
     return jsonOk({ ok: true, user: { id: user.id, name: user.name, email: user.email } });
   } catch (error) {

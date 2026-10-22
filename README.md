@@ -16,6 +16,7 @@ Status legend: **Verified** = implemented and exercised by tests or live smoke t
 | --- | --- | --- |
 | Cinematic WebGL hero (R3F) | Verified (build + live preview) | Dynamically imported; CSS/SVG fallback for reduced motion, viewports ≤ 380px, or no WebGL. Gate lowered from 640px so the 3D core reaches phones and sandbox preview panels. |
 | Preview embedding & cross-origin login | Verified (live) | `FRAME_ANCESTORS` / `NEXT_PUBLIC_COOKIE_SAME_SITE` env switches. Motion is fail-open (SSR never emits `opacity:0`); session cookie uses `SameSite=None; Secure` when framed cross-origin. Defaults stay hardened. |
+| Third-party-cookie survival in previews | Verified (live) | Session cookie adds `Partitioned` (CHIPS) in embedded mode; auth clicks invoke the Storage Access API from the user gesture; `StorageAccessNotice` explains blocked-cookie frames and offers a first-party tab escape hatch. |
 | Marketing pages (12) + blog/resources | Verified | Real content, sitemap, robots, JSON-LD FAQ, OG metadata. |
 | Auth (signup/login/logout/reset) | Verified | scrypt hashing, hashed session tokens, httpOnly cookies, rate limits; live smoke-tested. |
 | Password reset email delivery | Boundary | Token flow works; no mail provider configured (dev console link). See `docs/AUTH.md`. |

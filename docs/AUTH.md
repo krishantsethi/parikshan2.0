@@ -13,6 +13,9 @@
    - on success: new session row + cookie
 3. **Session resolution** (`src/server/auth/session.ts`)
    - cookie `pk_session` (httpOnly, SameSite=Lax, Secure in production, 7-day default TTL)
+   - embedded/preview mode (`NEXT_PUBLIC_COOKIE_SAME_SITE=none`): SameSite=None,
+     Secure forced, and `Partitioned` (CHIPS) so browsers that block third-party
+     cookies still keep the session inside the frame. Preview-only posture.
    - server hashes the token (SHA-256) and looks up a non-expired row, then loads the user
    - `getCurrentUser()` is memoized per request with React `cache()`
 4. **Logout** deletes the session row and clears the cookie.
@@ -38,7 +41,7 @@ Until then, **password reset requires server-console access** — an honest limi
 | --- | --- |
 | Token entropy | 256 bits (`randomBytes(32)`) |
 | Stored form | SHA-256 hex (unique index) |
-| Cookie flags | httpOnly, SameSite=Lax, Secure (prod), Path=/ |
+| Cookie flags | httpOnly, SameSite=Lax, Secure (prod), Path=/ — or SameSite=None; Secure; Partitioned in embedded preview mode |
 | Server-side expiry | yes (`expires_at`, checked on lookup) |
 | Invalidation on password change | all sessions deleted |
 | Session cap | none (rows expire; expired rows are cleaned opportunistically) |
@@ -58,5 +61,6 @@ Never rely on UI visibility for authorization. Every mutation route calls a guar
 ## Known gaps
 
 - No email verification, MFA, passkeys, or account lockout beyond IP rate limiting.
-- No CSRF token: the app relies on SameSite=Lax cookies plus JSON-only POST endpoints (multipart upload is also same-site-only via SameSite). A dedicated CSRF token is recommended before exposing state-changing GET endpoints or relaxing SameSite.
+- No CSRF token: the app relies on SameSite=Lax cookies plus JSON-only POST endpoints (multipart upload is also same-site-only via SameSite). A dedicated CSRF token is recommended before exposing state-changing GET endpoints or relaxing SameSite. In embedded preview mode (`COOKIE_SAME_SITE=none`) the SameSite mitigation is intentionally reduced; `Partitioned` scopes the session to the embedding top-level site, and the mode is documented as preview-only — never for real patient data.
+- Cross-origin preview frames: browsers that block third-party cookies by default would drop the session even with SameSite=None; Secure; Partitioned. Auth actions therefore call the Storage Access API (`document.requestStorageAccess()`) from the click gesture, and `StorageAccessNotice` explains the situation with a first-party "open in a full tab" escape hatch instead of failing silently. Where the API is absent behaviour is unchanged.
 - Rate limits are per instance (in-memory). Use a shared store for multi-instance deployments.
