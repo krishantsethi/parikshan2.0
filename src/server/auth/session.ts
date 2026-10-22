@@ -2,7 +2,14 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { getConfig, type AppConfig } from "@/lib/env";
 import { getStore } from "@/server/db";
-import { hashToken, randomToken } from "@/server/auth/tokens";
+import {
+  hashToken,
+  isStatelessDemoToken,
+  randomToken,
+  signDemoSessionToken,
+  verifyDemoSessionToken,
+} from "@/server/auth/tokens";
+import { DEMO_CREDENTIALS } from "@/server/db/memory-store";
 import type { User } from "@/types/domain";
 
 export const SESSION_COOKIE = "pk_session";
@@ -48,12 +55,26 @@ function cookieOptions(maxAgeSeconds: number) {
 }
 
 /** Create a session row + set the httpOnly cookie. */
-export async function establishSession(userId: string, userAgent: string | null): Promise<void> {
+export async function establishSession(
+  userId: string,
+  userAgent: string | null,
+  options?: { statelessDemo?: boolean },
+): Promise<void> {
   const cfg = getConfig();
   const store = await getStore();
-  const token = randomToken();
   const ttlSeconds = cfg.sessionTtlHours * 3600;
   const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+
+  if (options?.statelessDemo) {
+    // No row: the signed token is the whole session, so any serverless
+    // instance can honour it without shared storage.
+    const token = signDemoSessionToken(cfg.authSecret, ttlSeconds);
+    const jar = await cookies();
+    jar.set(SESSION_COOKIE, token, cookieOptions(ttlSeconds));
+    return;
+  }
+
+  const token = randomToken();
   await store.createSession({ userId, tokenHash: hashToken(token), expiresAt, userAgent });
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, cookieOptions(ttlSeconds));
@@ -63,7 +84,7 @@ export async function establishSession(userId: string, userAgent: string | null)
 export async function destroySession(): Promise<void> {
   const jar = await cookies();
   const token = jar.get(SESSION_COOKIE)?.value;
-  if (token) {
+  if (token && !isStatelessDemoToken(token)) {
     const store = await getStore();
     const session = await store.getSessionByTokenHash(hashToken(token));
     if (session) await store.deleteSession(session.id);
@@ -81,6 +102,15 @@ export const getCurrentUser = cache(async (): Promise<User | null> => {
   const token = jar.get(SESSION_COOKIE)?.value;
   if (!token) return null;
   const store = await getStore();
+
+  if (isStatelessDemoToken(token)) {
+    const cfg = getConfig();
+    // Never honour a demo token on a deployment with a real database.
+    if (cfg.databaseUrl || !cfg.demoMode) return null;
+    if (!verifyDemoSessionToken(cfg.authSecret, token)) return null;
+    return store.getUserByEmail(DEMO_CREDENTIALS.email);
+  }
+
   const session = await store.getSessionByTokenHash(hashToken(token));
   if (!session) return null;
   return store.getUserById(session.userId);

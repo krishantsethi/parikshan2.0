@@ -37,7 +37,12 @@ export async function POST(request: Request) {
       );
     }
 
-    await establishSession(user.id, request.headers.get("user-agent"));
+    // Stateless signed session: serverless lambdas do not share memory, so a
+    // row-backed demo session would vanish between the login POST and the
+    // next request. See src/server/auth/tokens.ts.
+    await establishSession(user.id, request.headers.get("user-agent"), {
+      statelessDemo: true,
+    });
     await store.logAudit({ userId: user.id, action: "login", entity: "user", entityId: user.id, meta: { demo: true } });
     return jsonOk({ ok: true, demo: true });
   } catch (error) {
