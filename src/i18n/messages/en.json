@@ -161,6 +161,8 @@
   "auth.error.emailTaken": "An account with this email already exists.",
   "auth.error.generic": "Authentication failed. Please try again.",
   "auth.error.storageAccess": "This preview blocked the cookies PARIKSHAN needs to keep you signed in. Allow cookies for this site below, or open the app in a full tab.",
+  "auth.persistence.title": "No database is configured on this deployment",
+  "auth.persistence.body": "Accounts and uploads are kept in this server's memory only, so a real account may be signed out when the server restarts or a different instance serves your next request. The demo workspace always works. Set DATABASE_URL for persistent accounts.",
   "auth.storage.title": "You are viewing PARIKSHAN inside a preview frame",
   "auth.storage.body": "Your browser treats this frame as a third-party site and may block the sign-in cookie, so logging in can appear to do nothing. Grant cookie access for this site, or open PARIKSHAN in a full browser tab where it runs first-party.",
   "auth.storage.enable": "Allow cookies for this preview",
